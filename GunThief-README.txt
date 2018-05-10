@@ -1,5 +1,3 @@
-
-
 --GUN THIEF README--
 How to install:
 
