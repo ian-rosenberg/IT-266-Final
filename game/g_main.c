@@ -31,7 +31,6 @@ int	snd_fry;
 int meansOfDeath;
 
 edict_t		*g_edicts;
-
 cvar_t	*deathmatch;
 cvar_t	*coop;
 cvar_t	*dmflags;

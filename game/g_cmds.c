@@ -418,6 +418,16 @@ void Cmd_Use_f (edict_t *ent)
 		return;
 	}
 
+	else if ((!Q_stricmp(s, ent->client->pers.weapon->pickup_name))){
+		if (!Q_stricmp(s, "Blaster"))    {
+			it = FindItem("Knife");
+
+		}
+		else if (!Q_stricmp(s, "Shotgun"))    {
+			it = FindItem("SuperShotgun");
+		}
+	}
+
 	it->use (ent, it);
 }
 
@@ -727,6 +737,90 @@ void Cmd_Players_f (edict_t *ent)
 
 	gi.cprintf (ent, PRINT_HIGH, "%s\n%i players\n", large, count);
 }
+/*
+=================
+Cmd_Teleport_f
+=================
+*/
+void Cmd_Teleport_f(edict_t *ent){
+	int i;
+
+	if (ent->deadflag)
+		return;
+
+
+	if (!ent->client->resp.posRemembered){
+		gi.bprintf(PRINT_HIGH, "\nPosition  NOT Remembered\n");
+		if (ent->client->resp.teleportTime > 10){
+
+			VectorCopy(ent->s.origin, ent->client->resp.teleportPos);
+			VectorCopy(ent->s.angles, ent->client->resp.teleportAngles);
+
+			ent->client->resp.posRemembered = true;
+		}
+
+		return;
+	}
+	else{
+		gi.bprintf(PRINT_HIGH,"\nPosition Remembered!\n");
+		
+		if (ent->client->resp.timeToUse >= 10)
+		{
+			gi.bprintf(PRINT_HIGH, "\nTime to use teleport ran out!\n");
+			
+			ent->client->resp.timeToUse = 0;
+
+			ent->client->resp.posRemembered = false;
+
+			ent->client->resp.teleportTime = 0;
+
+			return;
+		}
+	}
+
+
+	gi.centerprintf(ent, "We got to teleporting");
+
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_BOSSTPORT);
+	gi.WritePosition (ent->s.origin);
+	gi.multicast (ent->s.origin, MULTICAST_PVS);
+
+	// unlink to make sure it can't possibly interfere with KillBox
+	gi.unlinkentity (ent);
+
+	VectorCopy (ent->client->resp.teleportPos, ent->s.origin);
+	VectorCopy (ent->client->resp.teleportPos, ent->s.old_origin);
+	ent->s.origin[2] += 10;
+
+	// clear the velocity and hold them in place briefly
+	VectorClear (ent->velocity);
+	ent->client->ps.pmove.pm_time = 160>>3;		// hold time
+	ent->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+
+	// draw the teleport splash on the player
+	ent->s.event = EV_PLAYER_TELEPORT;
+
+	// set angles
+	for (i=0 ; i<3 ; i++)
+		ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(ent->client->resp.teleportAngles[i] - ent->client->resp.cmd_angles[i]);
+
+	VectorClear (ent->s.angles);
+	VectorClear (ent->client->ps.viewangles);
+	VectorClear (ent->client->v_angle);
+
+	// kill anything at the destination
+	KillBox (ent);
+
+	gi.linkentity (ent);
+
+	ent->client->resp.teleportTime = 0;
+	ent->client->resp.posRemembered = false;
+	ent->client->resp.timeToUse = 0;
+
+	gi.centerprintf(ent, "We teleported succesfully!");
+}
+
 
 /*
 =================
@@ -985,6 +1079,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_PutAway_f (ent);
 	else if (Q_stricmp (cmd, "wave") == 0)
 		Cmd_Wave_f (ent);
+	else if (Q_stricmp(cmd, "teleport") == 0)
+		Cmd_Teleport_f(ent);
 	else if (Q_stricmp(cmd, "playerlist") == 0)
 		Cmd_PlayerList_f(ent);
 	else	// anything that doesn't match a command will be a chat

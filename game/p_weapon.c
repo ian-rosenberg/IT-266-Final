@@ -23,6 +23,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "m_player.h"
 
 
+#define KNIFE_NORMAL_DAMAGE 50
+#define KNIFE_DEATHMATCH_DAMAGE 75
+#define KNIFE_KICK 250
+#define KNIFE_RANGE 50
+
+
 static qboolean	is_quad;
 static byte		is_silenced;
 
@@ -117,6 +123,8 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 
 qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
 {
+	
+	
 	int			index;
 	gitem_t		*ammo;
 
@@ -847,12 +855,22 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, in
 void Weapon_Blaster_Fire (edict_t *ent)
 {
 	int		damage;
+	vec3_t tempvec;
 
 	if (deathmatch->value)
 		damage = 15;
 	else
 		damage = 10;
 	Blaster_Fire (ent, vec3_origin, damage, false, EF_BLASTER);
+
+	VectorSet(tempvec, 0, 8, -8);
+	VectorAdd(tempvec, vec3_origin, tempvec);
+	Blaster_Fire(ent, tempvec, damage, false, EF_BLASTER);
+
+	VectorSet(tempvec, 0, -8, -8);
+	VectorAdd(tempvec, vec3_origin, tempvec);
+	Blaster_Fire(ent, tempvec, damage, false, EF_BLASTER);
+
 	ent->client->ps.gunframe++;
 }
 
@@ -1429,6 +1447,82 @@ void Weapon_BFG (edict_t *ent)
 
 	Weapon_Generic (ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
+
+void fire_knife(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
+{
+	trace_t tr; //detect whats in front of you up to range "vec3_t end"
+
+	vec3_t end;
+
+	VectorMA(start, KNIFE_RANGE, aimdir, end);  //calculates the range vector                      
+
+	tr = gi.trace(self->s.origin, NULL, NULL, end, self, MASK_SHOT);
+
+	if (!((tr.surface) && (tr.surface->flags & SURF_SKY)))
+	{
+		if (tr.fraction < 1.0)
+		{
+			if (tr.ent->takedamage)
+			{
+				
+				T_Damage(tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, kick, 0, 32);
+				gi.sound(self, CHAN_AUTO, gi.soundindex("misc/fhit3.wav"), 1, ATTN_NORM, 0);
+
+			}
+			else
+			{
+				gi.WriteByte(svc_temp_entity);
+				gi.WriteByte(TE_SPARKS);
+				gi.WritePosition(tr.endpos);
+				gi.WriteDir(tr.plane.normal);
+				gi.multicast(tr.endpos, MULTICAST_PVS);
+
+				gi.sound(self, CHAN_AUTO, gi.soundindex("weapons/grenlb1b.wav"), 1, ATTN_NORM, 0);
+
+			}
+		}
+	}
+	return;
+}
+
+void knife_attack(edict_t *ent, vec3_t g_offset, int damage)
+{
+	vec3_t  forward, right;
+	vec3_t  start;
+	vec3_t  offset;
+
+	if (is_quad)
+		damage *= 4;
+	AngleVectors(ent->client->v_angle, forward, right, NULL);
+	VectorSet(offset, 24, 8, ent->viewheight - 8);
+	VectorAdd(offset, g_offset, offset);
+	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+
+	VectorScale(forward, -2, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -1;
+
+	fire_knife(ent, start, forward, damage, KNIFE_KICK);
+}
+
+void Weapon_Knife_Fire(edict_t *ent)
+{
+	int damage;
+	if (deathmatch->value)
+		damage = KNIFE_DEATHMATCH_DAMAGE;
+	else
+		damage = KNIFE_NORMAL_DAMAGE;
+	knife_attack(ent, vec3_origin, damage);
+	ent->client->ps.gunframe++;
+}
+
+void Weapon_Knife(edict_t *ent)
+{
+	static int      pause_frames[] = { 19, 32, 0 };
+	static int      fire_frames[] = { 5, 0 };
+
+	Weapon_Generic(ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Knife_Fire);
+}
+
 
 
 //======================================================================

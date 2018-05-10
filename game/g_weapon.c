@@ -329,14 +329,16 @@ void blaster_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *
 	}
 	else
 	{
-		gi.WriteByte (svc_temp_entity);
+		return;
+
+		/*gi.WriteByte (svc_temp_entity);
 		gi.WriteByte (TE_BLASTER);
 		gi.WritePosition (self->s.origin);
 		if (!plane)
 			gi.WriteDir (vec3_origin);
 		else
 			gi.WriteDir (plane->normal);
-		gi.multicast (self->s.origin, MULTICAST_PVS);
+		gi.multicast (self->s.origin, MULTICAST_PVS);*/
 	}
 
 	G_FreeEdict (self);
@@ -360,7 +362,7 @@ void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int spee
 	VectorCopy (start, bolt->s.old_origin);
 	vectoangles (dir, bolt->s.angles);
 	VectorScale (dir, speed, bolt->velocity);
-	bolt->movetype = MOVETYPE_FLYMISSILE;
+	bolt->movetype = MOVETYPE_FLYRICOCHET;
 	bolt->clipmask = MASK_SHOT;
 	bolt->solid = SOLID_BBOX;
 	bolt->s.effects |= effect;
@@ -483,6 +485,33 @@ static void Grenade_Touch (edict_t *ent, edict_t *other, cplane_t *plane, csurfa
 	Grenade_Explode (ent);
 }
 
+static void proxim_think(edict_t *ent){
+	edict_t *blip = NULL;
+
+	if (level.time > ent->delay)
+	{
+		Grenade_Explode(ent);
+		return;
+	}
+
+	ent->think = proxim_think;
+
+	while ((blip = findradius(blip, ent->s.origin, 100)) != NULL){
+		if (!(blip->svflags & SVF_MONSTER) && !blip->client)
+			continue;
+		if (blip == ent->owner)
+			continue;
+		if (!blip->takedamage)
+			continue;
+		if (blip->health <= 0)
+			continue;
+		if (!visible(ent, blip))
+			continue;
+		ent->think = Grenade_Explode;
+		break;
+	}
+}
+
 void fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius)
 {
 	edict_t	*grenade;
@@ -507,8 +536,9 @@ void fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
 	grenade->s.modelindex = gi.modelindex ("models/objects/grenade/tris.md2");
 	grenade->owner = self;
 	grenade->touch = Grenade_Touch;
-	grenade->nextthink = level.time + timer;
-	grenade->think = Grenade_Explode;
+	grenade->nextthink = level.time + .1;
+	grenade->think = proxim_think;
+	grenade->delay = level.time + 5;
 	grenade->dmg = damage;
 	grenade->dmg_radius = damage_radius;
 	grenade->classname = "grenade";
@@ -540,8 +570,9 @@ void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int 
 	grenade->s.modelindex = gi.modelindex ("models/objects/grenade2/tris.md2");
 	grenade->owner = self;
 	grenade->touch = Grenade_Touch;
-	grenade->nextthink = level.time + timer;
-	grenade->think = Grenade_Explode;
+	grenade->nextthink = level.time + .1;
+	grenade->think = proxim_think;
+	grenade->delay = level.time + 60;
 	grenade->dmg = damage;
 	grenade->dmg_radius = damage_radius;
 	grenade->classname = "hgrenade";
@@ -617,6 +648,47 @@ void rocket_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
 	G_FreeEdict (ent);
 }
 
+void homing_think(edict_t *ent){
+	edict_t		*target = NULL;
+	edict_t		*blip = NULL;
+	vec3_t		targetdir, blipdir;
+	vec_t		speed;
+
+	while (((blip = findradius(blip, ent->s.origin, 1000)) != NULL)){
+		if (!(blip->svflags & SVF_MONSTER) && !blip->client)
+			continue;
+		if (blip == ent->owner)
+			continue;
+		if (blip->takedamage)
+			continue;
+		if (blip->health <= 0)
+			continue;
+		if (!visible(ent, blip))
+			continue;
+		if (!infront(ent, blip))
+			continue;
+		VectorSubtract(blip->s.origin, ent->s.origin, blipdir);
+		blipdir[2] += 16;
+		if (((target == NULL)) || (VectorLength(blipdir) < VectorLength(targetdir))){
+			target = blip;
+			VectorCopy(blipdir, targetdir);
+		}
+	}
+
+	if (target != NULL){
+		VectorNormalize(targetdir);
+		VectorScale(targetdir, 0.2, targetdir);
+		VectorAdd(targetdir, ent->movedir, targetdir);
+		VectorNormalize(targetdir);
+		VectorCopy(targetdir, ent->movedir);
+		vectoangles(targetdir, ent->s.angles);
+		speed = VectorLength(ent->velocity);
+		VectorScale(targetdir, speed, ent->velocity);
+	}
+
+	ent->nextthink = level.time + .1;
+}
+
 void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage)
 {
 	edict_t	*rocket;
@@ -635,8 +707,9 @@ void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 	rocket->s.modelindex = gi.modelindex ("models/objects/rocket/tris.md2");
 	rocket->owner = self;
 	rocket->touch = rocket_touch;
-	rocket->nextthink = level.time + 8000/speed;
-	rocket->think = G_FreeEdict;
+	rocket->nextthink = level.time + .1;
+	self->client->pers.inventory[ITEM_INDEX(FindItem("Rockets"))] -= 3;
+	rocket->think = homing_think;
 	rocket->dmg = damage;
 	rocket->radius_dmg = radius_damage;
 	rocket->dmg_radius = damage_radius;

@@ -35,6 +35,7 @@ void Weapon_Grenade (edict_t *ent);
 void Weapon_GrenadeLauncher (edict_t *ent);
 void Weapon_Railgun (edict_t *ent);
 void Weapon_BFG (edict_t *ent);
+void Weapon_Knife(edict_t *ent);
 
 gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
@@ -51,6 +52,7 @@ static int	power_shield_index;
 
 void Use_Quad (edict_t *ent, gitem_t *item);
 static int	quad_drop_timeout_hack;
+
 
 //======================================================================
 
@@ -1313,7 +1315,7 @@ always owned, never in the world
 */
 	{
 		"weapon_shotgun", 
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_Shotgun,
@@ -1336,7 +1338,7 @@ always owned, never in the world
 */
 	{
 		"weapon_supershotgun", 
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_SuperShotgun,
@@ -1359,7 +1361,7 @@ always owned, never in the world
 */
 	{
 		"weapon_machinegun", 
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_Machinegun,
@@ -1382,7 +1384,7 @@ always owned, never in the world
 */
 	{
 		"weapon_chaingun", 
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_Chaingun,
@@ -1405,7 +1407,7 @@ always owned, never in the world
 */
 	{
 		"ammo_grenades",
-		Pickup_Ammo,
+		NULL,
 		Use_Weapon,
 		Drop_Ammo,
 		Weapon_Grenade,
@@ -1428,7 +1430,7 @@ always owned, never in the world
 */
 	{
 		"weapon_grenadelauncher",
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_GrenadeLauncher,
@@ -1451,7 +1453,7 @@ always owned, never in the world
 */
 	{
 		"weapon_rocketlauncher",
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_RocketLauncher,
@@ -1474,7 +1476,7 @@ always owned, never in the world
 */
 	{
 		"weapon_hyperblaster", 
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_HyperBlaster,
@@ -1497,7 +1499,7 @@ always owned, never in the world
 */
 	{
 		"weapon_railgun", 
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_Railgun,
@@ -1520,7 +1522,7 @@ always owned, never in the world
 */
 	{
 		"weapon_bfg",
-		Pickup_Weapon,
+		NULL,
 		Use_Weapon,
 		Drop_Weapon,
 		Weapon_BFG,
@@ -1537,6 +1539,29 @@ always owned, never in the world
 		NULL,
 		0,
 /* precache */ "sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
+	},
+
+	//weapon_knife definition
+	{
+		"weapon_knife",
+		NULL,
+		Use_Weapon,                             
+		NULL,
+		Weapon_Knife,                         
+		"misc/w_pkup.wav",
+		NULL,
+		0,
+		"models/weapons/v_blast/tris.md2",      
+		"w_blaster",                                   
+		"Knife",                                       
+		0,
+		0,
+		NULL,
+		IT_WEAPON,
+		NULL,
+		0,
+		"weapons/hgrenlb1b.wav misc/fhit3.wav"
+		//This is precached
 	},
 
 	//
@@ -1875,7 +1900,7 @@ gives +1 to maximum health
 	// KEYS
 	//
 /*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for computer centers
+key for computer centersw
 */
 	{
 		"key_data_cd",
