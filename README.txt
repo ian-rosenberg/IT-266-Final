@@ -1,5 +1,3 @@
-
-
 --GUN THIEF README--
 How to install:
 
@@ -30,4 +28,5 @@ saved position.
 
 	Weapon Controls - All are the same, however to switch between triple blaster and knife, press 1 
 to perform the switch. The first switch to the weapon on the '1' key will be the knife.
+	The '2' key is disabled due to crashes caused by double tapping shotgun equip, so it has been disabled.
 
